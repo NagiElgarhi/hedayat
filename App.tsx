@@ -1,6 +1,5 @@
 
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { allSermons as initialSermons } from './data/sermons';
 import { surahs } from './data/surahs';
@@ -9,10 +8,8 @@ import { Sidebar } from './components/Sidebar';
 import { SermonView } from './components/SermonView';
 import { GenerateSermonModal } from './components/GenerateSermonModal';
 import { Footer } from './components/Footer';
-import { useProgress } from './hooks/useProgress';
 import { SearchIcon, BookOpenIcon, CheckCircleIcon, PlusCircleIcon, MenuIcon } from './components/icons';
-
-const SERMONS_STORAGE_KEY = 'juma_sermons_data_v1';
+import { getAllSermons, addSermon, updateSermon } from './data/idb';
 
 const SermonCard: React.FC<{ sermon: Sermon; onSelect: (id: number) => void; isCompleted: boolean }> = ({ sermon, onSelect, isCompleted }) => (
     <div
@@ -69,19 +66,7 @@ const WelcomeGuide = () => (
 
 
 const App: React.FC = () => {
-    const [sermons, setSermons] = useState<Sermon[]>(() => {
-        try {
-            const storedSermons = localStorage.getItem(SERMONS_STORAGE_KEY);
-            if (storedSermons) {
-                return JSON.parse(storedSermons);
-            }
-        } catch (e) {
-            console.error("Failed to load sermons from localStorage", e);
-            localStorage.removeItem(SERMONS_STORAGE_KEY);
-        }
-        return initialSermons;
-    });
-    
+    const [sermons, setSermons] = useState<Sermon[]>([]);
     const [selectedSermonId, setSelectedSermonId] = useState<number | null>(null);
     const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -94,13 +79,41 @@ const App: React.FC = () => {
     
     const [apiKey, setApiKey] = useState('');
 
-    const { progress, completedCount, toggleComplete, isCompleted } = useProgress(sermons.length);
+    // --- Progress Calculation ---
+    const completedCount = useMemo(() => sermons.filter(s => s.isCompleted).length, [sermons]);
+    const progress = useMemo(() => (sermons.length > 0 ? (completedCount / sermons.length) * 100 : 0), [completedCount, sermons.length]);
+
+    const isCompleted = useCallback((sermonId: number) => {
+        return sermons.find(s => s.id === sermonId)?.isCompleted || false;
+    }, [sermons]);
+    
+    const toggleComplete = useCallback(async (sermonId: number) => {
+        const sermonToUpdate = sermons.find(s => s.id === sermonId);
+        if (sermonToUpdate) {
+            const updatedSermon = { ...sermonToUpdate, isCompleted: !sermonToUpdate.isCompleted };
+            await updateSermon(updatedSermon);
+            setSermons(currentSermons =>
+                currentSermons.map(s => (s.id === sermonId ? updatedSermon : s))
+            );
+        }
+    }, [sermons]);
 
     useEffect(() => {
+        const loadData = async () => {
+            try {
+                const dbSermons = await getAllSermons();
+                setSermons(dbSermons.sort((a,b) => b.id - a.id)); 
+            } catch (error) {
+                console.error("Failed to load sermons from IndexedDB", error);
+            }
+        };
+
         const savedKey = localStorage.getItem('gemini_api_key');
         if (savedKey) {
             setApiKey(savedKey);
         }
+
+        loadData();
 
         const handleResize = () => {
             if (window.innerWidth < 768) {
@@ -115,16 +128,6 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        try {
-            localStorage.setItem(SERMONS_STORAGE_KEY, JSON.stringify(sermons));
-        } catch (e) {
-            console.error("Failed to save sermons to localStorage", e);
-        }
-    }, [sermons]);
-
-    useEffect(() => {
-        // When the user starts searching, take them back to the list view
-        // to see the search results.
         if (searchTerm.trim() !== '') {
             setSelectedSermonId(null);
         }
@@ -148,8 +151,7 @@ const App: React.FC = () => {
                 }
 
                 const surahName = surahs.find(s => s.number === sermon.surahNumber)?.name.toLowerCase() || '';
-
-                // Combine all searchable text fields from the sermon into one string for a comprehensive search.
+                
                 const contentToSearch = [
                     sermon.title,
                     sermon.verses,
@@ -167,7 +169,7 @@ const App: React.FC = () => {
 
                 return contentToSearch.includes(lowerCaseSearch);
             })
-            .sort((a,b) => b.id - a.id); // Show newest first
+            .sort((a,b) => b.id - a.id);
     }, [selectedSurah, searchTerm, sermons]);
 
     const handleSelectSermon = (id: number) => {
@@ -273,12 +275,14 @@ ${topic ? `التركيز الخاص: "${topic}".` : 'التركيز العام:
             const generatedContent: GeneratedSermonContent = JSON.parse(response.text.trim());
 
             const newSermon: Sermon = {
-                id: Date.now(), // Use timestamp for a unique ID
+                id: Date.now(),
                 surahNumber: surahNumber,
-                pageNumber: 0, // Generated sermons don't have a page number
+                pageNumber: 0,
+                isCompleted: false,
                 ...generatedContent
             };
 
+            await addSermon(newSermon);
             setSermons(prev => [newSermon, ...prev]);
             setModalOpen(false);
             handleSelectSermon(newSermon.id);

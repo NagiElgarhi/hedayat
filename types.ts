@@ -4,6 +4,7 @@ export interface Sermon {
   title: string;
   pageNumber: number;
   verses: string;
+  isCompleted: boolean;
   khutbah1: {
     title: string;
     verses: string;
