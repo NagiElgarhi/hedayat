@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Surah } from '../types';
 import { XIcon } from './icons';
@@ -118,7 +117,7 @@ export const GenerateSermonModal: React.FC<GenerateSermonModalProps> = ({
     <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4" aria-modal="true" role="dialog">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl transform transition-all max-h-[90vh] flex flex-col" role="document">
         <div className="p-6 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-          <h2 className="text-2xl font-bold text-teal-800">توليد خطبة جديدة</h2>
+          <h2 className="text-2xl font-bold text-teal-800">إنشاء خطبة جديدة</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <XIcon className="w-6 h-6" />
           </button>
@@ -128,7 +127,7 @@ export const GenerateSermonModal: React.FC<GenerateSermonModalProps> = ({
           <div className="p-12 text-center flex-grow flex items-center justify-center">
             <div>
               <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-lg text-gray-700">جاري توليد الخطبة...</p>
+              <p className="text-lg text-gray-700">جاري إنشاء الخطبة...</p>
               <p className="text-sm text-gray-500">قد يستغرق هذا بعض الوقت. الرجاء عدم إغلاق النافذة.</p>
             </div>
           </div>
@@ -149,7 +148,7 @@ export const GenerateSermonModal: React.FC<GenerateSermonModalProps> = ({
                   id="surah"
                   value={selectedSurah}
                   onChange={(e) => setSelectedSurah(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition"
                   required
                 >
                   <option value="" disabled>-- الرجاء اختيار سورة --</option>
@@ -168,7 +167,7 @@ export const GenerateSermonModal: React.FC<GenerateSermonModalProps> = ({
                   id="topic"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition disabled:bg-gray-100"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-teal-600 transition disabled:bg-gray-100"
                   disabled={!selectedSurah || topicOptions.length === 0}
                 >
                   <option value="">-- اختياري: اختر مقطعًا لتركيز الخطبة --</option>
@@ -209,7 +208,7 @@ export const GenerateSermonModal: React.FC<GenerateSermonModalProps> = ({
                 disabled={!selectedSurah || isGenerating}
                 className="px-6 py-2 text-white bg-teal-600 rounded-lg hover:bg-teal-700 font-semibold disabled:bg-teal-300 disabled:cursor-not-allowed transition-colors"
               >
-                {isGenerating ? 'جاري التوليد...' : 'توليد الخطبة'}
+                {isGenerating ? 'جاري الإنشاء...' : 'إنشاء الخطبة'}
               </button>
             </div>
           </form>
